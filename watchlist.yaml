@@ -1,0 +1,27 @@
+categories:
+- machinist equipment
+- metalworking tools
+- hand tools
+- power tools
+- measuring instruments
+
+items:
+- name: Clamps Set (Woodworking/Metalworking)
+  queries:
+  - tvingar
+  - skruvtvingar
+  - snabbtvingar
+  - clamp set
+  - tvingar parti
+  keywords:
+  - tving
+  - skruvtving
+  - snabbtving
+  - c-klammer
+  - bessey
+  - piher
+  - irwin
+  notes: Look for sets or bundles of multiple clamps rather than single pieces. Check
+    for straight bars, working threads, and minimal weld spatter or heavy rust.
+  max_price: 200.0
+  priority: high

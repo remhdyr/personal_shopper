@@ -1,0 +1,50 @@
+[project]
+name = "shopper"
+version = "0.1.0"
+description = "Self-hosted service that hunts good deals on used machinist equipment, hand and power tools, analyzes them with Gemini, and notifies you on Telegram."
+readme = "README.md"
+requires-python = ">=3.12"
+license = "MIT"
+dependencies = [
+    "httpx>=0.27",
+    "pydantic>=2.7",
+    "pydantic-settings>=2.3",
+    "python-telegram-bot>=21.4",
+    "google-genai>=0.3",
+    "apscheduler>=3.10",
+    "pyyaml>=6.0",
+    "tenacity>=8.4",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.2",
+    "pytest-asyncio>=0.23",
+    "ruff>=0.5",
+]
+
+[project.scripts]
+shopper = "shopper.main:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/shopper"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.ruff.lint.per-file-ignores]
+# Long lines here are embedded HTML/CSS/JS for the local dashboard page, not
+# Python logic; wrapping them would hurt readability for no benefit.
+"src/shopper/dashboard.py" = ["E501"]

@@ -1,0 +1,31 @@
+# NOTE FOR AGENTS: the buyer profile, taste rules, top wants and file-maintenance
+# conventions live in  watchlist.yaml — # read that first, then this file for 
+# the detailed list of what's owned.
+#
+# ── inventory.yaml ────────────────────────────────────────────────────────────
+# Things you already own. Shopper hands this to the AI so it can:
+#   1. Flag a listing that just duplicates gear you already have (lower fit,
+#      unless it's an exceptional bargain or a useful spare/upgrade).
+#   2. Put extra focus on tooling/accessories that are COMPATIBLE with your
+#      machines — matching tapers, spindle bore, chuck mounts, tool-post and
+#      collet sizes get a fit boost, and the AI names which machine they fit.
+#
+# Per entry:
+#   name               Short label for the item you own.
+#   kind/brand/model   Optional structured identifiers.
+#   specs              Compatibility-critical values (free text; add units).
+#   compatible         Accessories/tooling that fit it — the AI boosts these.
+#   duplicate_keywords Terms that mean "this listing is the same machine".
+#   notes              Anything else worth knowing (what to avoid over-matching).
+# ──────────────────────────────────────────────────────────────────────────────
+
+items:
+  - name: Japanese Ryoba hand saw (cheap)
+    kind: hand saw
+    notes: >-
+      Double-edged Japanese pull saw — rip teeth on one edge, crosscut on the
+      other. Cheap/entry-level. I like the pull-saw style and would upgrade to a
+      nicer one, and I want the other two classic Japanese saws too (watchlist).
+    duplicate_keywords:
+      - "billig ryoba"
+      - "enkel ryoba"

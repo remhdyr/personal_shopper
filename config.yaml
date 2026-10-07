@@ -1,0 +1,172 @@
+# Poll cadence (minutes). Every 10 minutes the service checks each source for
+# newly-posted listings; a genuinely great one posted in the last few minutes
+# earns an instant Telegram alert (see `alerts:` below).
+poll_interval_minutes: 10
+
+# Global limits to protect the Gemini free tier (requests-per-day budget).
+# This is a global safety valve across *all* AI providers. The real per-model
+# budget enforcement lives in the `ai:` section below (each provider's
+# daily_limit / rpm), so keep this high — it only exists to stop a
+# misconfigured router from running away.
+max_ai_analyses_per_day: 100000
+
+# Cap AI calls in a single poll so a first run against a large backlog can't
+# burn the daily budget (or trip a provider's per-minute limit) all at once. The
+# remainder is analyzed on later polls. 0 disables the per-run cap.
+max_ai_analyses_per_run: 25
+
+# When true, candidates are logged instead of hitting the dashboard/Telegram.
+# Great for the first runs while you tune your watchlist.
+dry_run: false
+
+# The dashboard shows every deal that clears these (adaptive) bars. It's the
+# primary interface — browse it over your VPN whenever you like. Both the deal
+# score and the personal-fit score must clear the bar for a listing to appear.
+notify:
+  min_deal_score: 65
+  min_fit_score: 55
+  # Relax both bars automatically when the dashboard is running dry: each deal
+  # short of this many pending lowers the bars a little (down to a sane floor),
+  # so a ratcheted-up threshold or a quiet market can't leave the feed empty.
+  # 0 disables the relief.
+  relief_target: 8
+
+# Telegram is a push alert for the cream of the crop: an exceptional deal that
+# was *just* posted, so you can act before someone else does. Everything that
+# clears the dashboard bar above still shows on the dashboard regardless.
+alerts:
+  enabled: true
+  # A "really good hit" must clear these higher bars.
+  min_deal_score: 80
+  min_fit_score: 70
+  # Only alert about listings first posted within this many minutes. Keep this
+  # >= poll_interval_minutes so nothing slips through between polls.
+  max_age_minutes: 15
+  # Safety caps so a burst of great listings can't spam you. 0 means no cap.
+  max_per_run: 5
+  max_per_day: 30
+
+# What you're hunting for lives in its own file (see `watchlist.yaml`). It feeds
+# both the marketplace queries and the AI's judgement of how well an item fits.
+watchlist_file: watchlist.yaml
+
+# Keep the dashboard-managed watchlist in sync with its GitHub remote. Local
+# dashboard edits win if both machines edit the same YAML section; other merge
+# conflicts are left untouched for manual resolution.
+github_sync:
+  enabled: true
+  interval_minutes: 5
+  remote: origin
+
+# What you already own lives in `inventory.yaml`. The AI uses it to avoid
+# flagging duplicates and to put extra focus on tooling that fits your machines.
+inventory_file: inventory.yaml
+
+# AI provider routing (the "load balancer"). Analyses are spread across the
+# providers below to borrow more free/cheap bandwidth than any single tier
+# gives. `mode: capacity_weighted` sends more work to whichever provider has the
+# most daily budget left; each provider is throttled to its own rpm and
+# daily_limit, and the router fails over to another provider on error. A
+# provider with no API key in .env is skipped automatically, so the dormant
+# Qwen entry stays inactive until you set QWEN_API_KEY.
+ai:
+  mode: capacity_weighted
+  providers:
+    # Google Gemini (free tier: 15 requests/minute). The API key comes from
+    # GEMINI_API_KEY; leaving `model` blank uses GEMINI_MODEL from .env.
+    - name: gemini
+      kind: gemini
+      rpm: 15
+      daily_limit: 0        # 0 = no daily cap (Gemini's RPD is generous)
+      weight: 1.0
+    # Qwen-VL via DashScope's OpenAI-compatible endpoint. DORMANT: activates
+    # only once QWEN_API_KEY is set in .env — no code change needed.
+    - name: qwen
+      kind: openai_compat
+      model: qwen-vl-max
+      base_url: https://dashscope-intl.aliyuncs.com/compatible-mode/v1
+      rpm: 60
+      daily_limit: 0
+      weight: 1.0
+
+# Global, hard price envelope (in SEK). Listings outside are discarded before AI
+# analysis. Per-item ceilings in the watchlist narrow this further.
+search:
+  min_price: 100
+  max_price: 15000
+  # Optional: restrict to a region string where the source supports it.
+  location: ""
+  # How many marketplace searches to run in parallel per source each poll.
+  # Higher is faster but risks per-host rate limits (429s); 6 is a safe default.
+  concurrency: 6
+
+# Where you are and what it costs to fetch an item by car. Used to show the
+# cheaper of shipping vs. pickup driving cost, and to highlight nearby listings.
+logistics:
+  home_city: "Malmö"
+  car_cost_per_hour: 100    # SEK per hour of driving
+  car_cost_per_km: 2        # SEK per km
+  avg_speed_kmh: 80         # used to estimate driving time
+  nearby_km: 50             # listings within this one-way distance are flagged "nearby"
+
+# Per-source toggles. eBay, Tradera and Auctionet are reliable; Klaravik,
+# Blinto, PSAuction and Blocket are best-effort public/website integrations
+# that may break if their sites change.
+sources:
+  ebay:
+    enabled: true
+    # eBay marketplace to search. EBAY_SE is NOT supported by the Browse API;
+    # use e.g. EBAY_DE, EBAY_GB, EBAY_US. Prices are auto-converted to SEK.
+    marketplace: EBAY_DE
+    # Only return used items. Keeps the feed from being swamped by identical new
+    # stock from countless retailers; set false to also include new/refurbished.
+    used_only: true
+  tradera:
+    enabled: true
+  auctionet:
+    # Public read API — no credentials needed.
+    enabled: true
+    # Keep only lots in this currency (the app reasons in SEK end to end).
+    currency: "SEK"
+  klaravik:
+    # Public auction pages — no credentials needed.
+    enabled: true
+  blinto:
+    # Public auction pages — no credentials needed.
+    enabled: true
+  psauction:
+    # Uses PS Auction's public Klevu search endpoint — no credentials needed.
+    enabled: true
+  blocket:
+    # Uses public search-page structured data without credentials. Optionally
+    # set BLOCKET_TOKEN to use Blocket's internal search endpoint instead.
+    enabled: true
+    # Business and unknown seller types are deferred before AI analysis.
+    private_sellers_only: true
+    # Auction houses cross-post teaser ads here. Their own listings have better
+    # bid and reserve status, so omit those Blocket seller shops.
+    excluded_sellers:
+      - Blinto
+      - Klaravik
+      - PS Auction
+  fleasy:
+    # Disabled: the former Shopify JSON endpoint now returns HTML. Re-enable
+    # only after a maintained HTML search adapter is available.
+    enabled: false
+  aterbygg:
+    # Disabled: Återbygg migrated away from the public WooCommerce APIs used
+    # by this adapter. Re-enable after a maintained search adapter is added.
+    enabled: false
+
+# The primary web dashboard: a plain HTML page listing every deal that cleared
+# the `notify:` bar, with like/dislike buttons. It binds to 0.0.0.0 so you can
+# reach it over your private VPN (e.g. Tailscale) — the VPN, not localhost, is
+# what controls access. Set host to 127.0.0.1 to keep it strictly local.
+dashboard:
+  enabled: true
+  host: "0.0.0.0"
+  port: 8787
+  # Never show fewer than this many cards: when too few real, above-bar deals
+  # are pending, the best still-open listings that scored just under the bar are
+  # shown as "below bar" backfill so there's always something to browse. 0 = off.
+  min_visible: 8

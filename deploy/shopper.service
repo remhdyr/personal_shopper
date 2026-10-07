@@ -1,0 +1,19 @@
+[Unit]
+Description=Shopper - Online auction deals hunter
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# Adjust User and WorkingDirectory to your setup.
+User=%i
+WorkingDirectory=<installation path>
+# uv runs the app inside the project's virtualenv.
+ExecStart=<installation path>/.venv/bin/shopper
+Restart=on-failure
+RestartSec=15
+# Persist the SQLite database across restarts (data/ dir under WorkingDirectory).
+Environment=SHOPPER_LOG_LEVEL=INFO
+
+[Install]
+WantedBy=multi-user.target
